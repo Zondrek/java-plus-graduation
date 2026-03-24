@@ -55,7 +55,7 @@ services:
       retries: 10
 
   stats-server:
-    build: ./stats/stats-service
+    build: ./stats/stats-server
     depends_on:
       stats-db:
         condition: service_healthy
