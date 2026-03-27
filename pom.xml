@@ -21,7 +21,6 @@
 		<module>common</module>
 		<module>ewm</module>
 		<module>stats</module>
-		<module>rest-service-gateway</module>
 		<module>infra</module>
 		<module>core</module>
 	</modules>
