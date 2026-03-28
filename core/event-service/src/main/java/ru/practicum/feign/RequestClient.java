@@ -19,11 +19,16 @@ public interface RequestClient {
     List<ParticipationRequestDto> getRequestsByEventIdAndIds(
             @RequestParam Long eventId, @RequestParam List<Long> requestIds);
 
-    @PatchMapping("/internal/requests/bulk-update")
+    @PostMapping("/internal/requests/bulk-update")
     void bulkUpdateStatus(@RequestParam Long eventId,
                           @RequestParam List<Long> requestIds,
                           @RequestParam ParticipationStatus status);
 
-    @PatchMapping("/internal/requests/reject-pending")
+    @PostMapping("/internal/requests/reject-pending")
     void rejectAllPending(@RequestParam Long eventId);
+
+    @GetMapping("/internal/requests/exists")
+    boolean participationExists(@RequestParam Long userId,
+                                @RequestParam Long eventId,
+                                @RequestParam ParticipationStatus status);
 }

@@ -24,7 +24,7 @@ public class InternalEventController {
         return eventService.getEventsByIds(ids);
     }
 
-    @PatchMapping("/{eventId}/confirmed-requests")
+    @PostMapping("/{eventId}/confirmed-requests")
     public void updateConfirmedRequests(@PathVariable Long eventId, @RequestParam int delta) {
         eventService.updateConfirmedRequests(eventId, delta);
     }

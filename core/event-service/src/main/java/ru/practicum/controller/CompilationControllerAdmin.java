@@ -1,4 +1,4 @@
-package ru.practicum.controller.compilation;
+package ru.practicum.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

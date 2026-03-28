@@ -134,22 +134,6 @@ services:
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka
     restart: on-failure
 
-  interaction-service:
-    build: ./core/interaction-service
-    depends_on:
-      ewm-db:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      discovery-server:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://ewm-db:5432/ewm-db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 12345
-      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka
-    restart: on-failure
-
 volumes:
   ewm-db-data:
   stats-db-data:

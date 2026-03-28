@@ -1,4 +1,4 @@
-package ru.practicum.controller.comment;
+package ru.practicum.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

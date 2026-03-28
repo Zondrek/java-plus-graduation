@@ -40,7 +40,7 @@ public class InternalRequestController {
                 .toList();
     }
 
-    @PatchMapping("/bulk-update")
+    @PostMapping("/bulk-update")
     public void bulkUpdateStatus(
             @RequestParam Long eventId,
             @RequestParam List<Long> requestIds,
@@ -48,7 +48,7 @@ public class InternalRequestController {
         requestRepository.bulkUpdateStatus(eventId, requestIds, status);
     }
 
-    @PatchMapping("/reject-pending")
+    @PostMapping("/reject-pending")
     public void rejectAllPending(@RequestParam Long eventId) {
         requestRepository.rejectAllPendingRequests(eventId, ParticipationStatus.REJECTED);
     }
