@@ -21,7 +21,8 @@
 		<module>common</module>
 		<module>ewm</module>
 		<module>stats</module>
-		<module>rest-service-gateway</module>
+		<module>infra</module>
+		<module>core</module>
 	</modules>
 
 	<properties>
@@ -31,6 +32,7 @@
 		<lombok.version>1.18.30</lombok.version>
 		<org.postgresql.version>42.7.7</org.postgresql.version>
 		<com.h2database.version>2.3.232</com.h2database.version>
+		<spring-cloud.version>2023.0.3</spring-cloud.version>
 	</properties>
 
 	<dependencies>
@@ -48,6 +50,18 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<plugins>

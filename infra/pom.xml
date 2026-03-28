@@ -9,24 +9,13 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>ewm</artifactId>
+    <artifactId>infra</artifactId>
     <packaging>pom</packaging>
 
     <modules>
-        <module>ewm-dto</module>
+        <module>discovery-server</module>
+        <module>config-server</module>
+        <module>gateway-server</module>
     </modules>
-
-    <properties>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-    </dependencies>
 
 </project>
