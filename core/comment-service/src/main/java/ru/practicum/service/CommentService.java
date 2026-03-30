@@ -7,17 +7,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dto.comment.CommentDto;
 import ru.practicum.dto.comment.NewCommentDto;
+import ru.practicum.dto.event.EventInternalDto;
 import ru.practicum.dto.user.UserDto;
 import ru.practicum.enumeration.ParticipationStatus;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.feign.EventClient;
 import ru.practicum.feign.RequestClient;
 import ru.practicum.feign.UserClient;
 import ru.practicum.mapper.CommentMapper;
 import ru.practicum.model.Comment;
-import ru.practicum.model.Event;
 import ru.practicum.repository.CommentRepository;
-import ru.practicum.repository.EventRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ import static ru.practicum.enumeration.EventState.PUBLISHED;
 public class CommentService {
 
     private final CommentRepository commRep;
-    private final EventRepository eventRepository;
+    private final EventClient eventClient;
     private final RequestClient requestClient;
     private final UserClient userClient;
     private final CommentMapper mapper;
@@ -46,8 +46,7 @@ public class CommentService {
         Long eventId = newCommentDto.getEventId();
         log.info("Попытка создания нового комментария для события ID: {} от пользователя ID: {}", eventId, userId);
 
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException("Событие с ID: " + eventId + " не найдено."));
+        EventInternalDto event = eventClient.getEvent(eventId);
 
         // Статус события должен быть "Опубликовано"
         if (!PUBLISHED.equals(event.getState())) {
@@ -104,10 +103,8 @@ public class CommentService {
             return new ArrayList<>();
         }
 
-        // Проверяем существование события напрямую через репозиторий
-        if (!eventRepository.existsById(eventId)) {
-            throw new NotFoundException("Событие с ID: " + eventId + " не найдено.");
-        }
+        // Проверяем существование события через Feign
+        eventClient.getEvent(eventId);
 
         List<Comment> comments = commRep.findByEventId(eventId);
 

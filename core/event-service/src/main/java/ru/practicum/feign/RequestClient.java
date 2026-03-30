@@ -26,9 +26,4 @@ public interface RequestClient {
 
     @PostMapping("/internal/requests/reject-pending")
     void rejectAllPending(@RequestParam Long eventId);
-
-    @GetMapping("/internal/requests/exists")
-    boolean participationExists(@RequestParam Long userId,
-                                @RequestParam Long eventId,
-                                @RequestParam ParticipationStatus status);
 }

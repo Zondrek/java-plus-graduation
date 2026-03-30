@@ -165,10 +165,10 @@ public class EventService {
                 .map(event -> {
                     EventShortDto dto = eventMapper.toShortDto(event);
                     dto.setViews(finalViewsMap.getOrDefault(event.getId(), 0L));
-                    enrichShortDtoWithUser(dto, event.getInitiatorId());
                     return dto;
                 })
                 .collect(Collectors.toList());
+        enrichShortDtosWithUsers(result, eventsList);
 
         // Сортировка по просмотрам, если указана
         if (sort == EventSort.VIEWS) {
@@ -209,7 +209,7 @@ public class EventService {
 
         EventFullDto result = eventMapper.toFullDto(event);
         result.setViews(stats.isEmpty() ? 0L : stats.getFirst().getHits());
-        enrichFullDtoWithUser(result, event.getInitiatorId());
+        enrichSingleDtoWithUser(result, event.getInitiatorId());
 
         log.info("Получено публичное событие с ID: {}, просмотров: {}", id, result.getViews());
         return result;
@@ -228,13 +228,12 @@ public class EventService {
         Pageable pageable = PageRequest.of(from / size, size);
         Iterable<Event> events = eventRepository.findAll(predicate, pageable);
 
-        List<EventShortDto> result = StreamSupport.stream(events.spliterator(), false)
-                .map(event -> {
-                    EventShortDto dto = eventMapper.toShortDto(event);
-                    enrichShortDtoWithUser(dto, event.getInitiatorId());
-                    return dto;
-                })
+        List<Event> eventsList = StreamSupport.stream(events.spliterator(), false)
                 .collect(Collectors.toList());
+        List<EventShortDto> result = eventsList.stream()
+                .map(eventMapper::toShortDto)
+                .collect(Collectors.toList());
+        enrichShortDtosWithUsers(result, eventsList);
 
         log.info("Получено {} событий пользователя {}", result.size(), userId);
         return result;
@@ -285,7 +284,7 @@ public class EventService {
         }
 
         EventFullDto result = eventMapper.toFullDto(event);
-        enrichFullDtoWithUser(result, event.getInitiatorId());
+        enrichSingleDtoWithUser(result, event.getInitiatorId());
         return result;
     }
 
@@ -338,7 +337,7 @@ public class EventService {
         log.info("Обновлено событие с ID: {}", eventId);
 
         EventFullDto result = eventMapper.toFullDto(event);
-        enrichFullDtoWithUser(result, event.getInitiatorId());
+        enrichSingleDtoWithUser(result, event.getInitiatorId());
         return result;
     }
 
@@ -383,13 +382,12 @@ public class EventService {
         Pageable pageable = PageRequest.of(from / size, size);
         Iterable<Event> events = eventRepository.findAll(predicate, pageable);
 
-        List<EventFullDto> result = StreamSupport.stream(events.spliterator(), false)
-                .map(event -> {
-                    EventFullDto dto = eventMapper.toFullDto(event);
-                    enrichFullDtoWithUser(dto, event.getInitiatorId());
-                    return dto;
-                })
+        List<Event> eventsList = StreamSupport.stream(events.spliterator(), false)
                 .collect(Collectors.toList());
+        List<EventFullDto> result = eventsList.stream()
+                .map(eventMapper::toFullDto)
+                .collect(Collectors.toList());
+        enrichFullDtosWithUsers(result, eventsList);
 
         log.info("Администратор получил {} событий", result.size());
         return result;
@@ -440,7 +438,7 @@ public class EventService {
         log.info("Администратор обновил событие с ID: {}", eventId);
 
         EventFullDto result = eventMapper.toFullDto(event);
-        enrichFullDtoWithUser(result, event.getInitiatorId());
+        enrichSingleDtoWithUser(result, event.getInitiatorId());
         return result;
     }
 
@@ -614,21 +612,47 @@ public class EventService {
 
     // -------- private helpers --------
 
-    private void enrichShortDtoWithUser(EventShortDto dto, Long initiatorId) {
+    private Map<Long, UserShortDto> fetchUsersMap(List<Long> initiatorIds) {
+        List<Long> uniqueIds = initiatorIds.stream().distinct().toList();
+        Map<Long, UserShortDto> usersMap = new java.util.HashMap<>();
         try {
-            UserDto user = userClient.getUser(initiatorId);
-            dto.setInitiator(UserShortDto.builder().id(user.getId()).name(user.getName()).build());
+            List<UserDto> users = userClient.getUsers(uniqueIds);
+            for (UserDto u : users) {
+                usersMap.put(u.getId(), UserShortDto.builder().id(u.getId()).name(u.getName()).build());
+            }
         } catch (Exception e) {
-            log.warn("Failed to fetch user {} for event enrichment", initiatorId, e);
+            log.warn("Failed to batch-fetch users for event enrichment", e);
+        }
+        return usersMap;
+    }
+
+    private void enrichShortDtosWithUsers(List<EventShortDto> dtos, List<Event> events) {
+        List<Long> initiatorIds = events.stream().map(Event::getInitiatorId).toList();
+        Map<Long, UserShortDto> usersMap = fetchUsersMap(initiatorIds);
+        for (int i = 0; i < dtos.size(); i++) {
+            UserShortDto user = usersMap.get(events.get(i).getInitiatorId());
+            if (user != null) {
+                dtos.get(i).setInitiator(user);
+            }
         }
     }
 
-    private void enrichFullDtoWithUser(EventFullDto dto, Long initiatorId) {
-        try {
-            UserDto user = userClient.getUser(initiatorId);
-            dto.setInitiator(UserShortDto.builder().id(user.getId()).name(user.getName()).build());
-        } catch (Exception e) {
-            log.warn("Failed to fetch user {} for event enrichment", initiatorId, e);
+    private void enrichFullDtosWithUsers(List<EventFullDto> dtos, List<Event> events) {
+        List<Long> initiatorIds = events.stream().map(Event::getInitiatorId).toList();
+        Map<Long, UserShortDto> usersMap = fetchUsersMap(initiatorIds);
+        for (int i = 0; i < dtos.size(); i++) {
+            UserShortDto user = usersMap.get(events.get(i).getInitiatorId());
+            if (user != null) {
+                dtos.get(i).setInitiator(user);
+            }
+        }
+    }
+
+    private void enrichSingleDtoWithUser(EventFullDto dto, Long initiatorId) {
+        Map<Long, UserShortDto> usersMap = fetchUsersMap(List.of(initiatorId));
+        UserShortDto user = usersMap.get(initiatorId);
+        if (user != null) {
+            dto.setInitiator(user);
         }
     }
 }

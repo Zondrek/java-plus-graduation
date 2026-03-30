@@ -38,10 +38,4 @@ public class RequestClientFallback implements RequestClient {
     public void rejectAllPending(Long eventId) {
         log.warn("request-service unavailable, cannot reject pending requests");
     }
-
-    @Override
-    public boolean participationExists(Long userId, Long eventId, ParticipationStatus status) {
-        log.warn("request-service unavailable, assuming no participation for userId={}, eventId={}", userId, eventId);
-        return false;
-    }
 }
