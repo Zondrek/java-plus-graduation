@@ -1,16 +1,14 @@
 package ru.practicum.service;
 
 import com.querydsl.core.BooleanBuilder;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.DTO.RequestStatisticDto;
-import ru.practicum.DTO.ResponseStatisticDto;
-import ru.practicum.StatsClient;
+import ru.practicum.AnalyzerClient;
+import ru.practicum.CollectorClient;
 import ru.practicum.dto.event.*;
 import ru.practicum.dto.request.EventRequestStatusUpdateRequest;
 import ru.practicum.dto.request.EventRequestStatusUpdateResult;
@@ -32,10 +30,10 @@ import ru.practicum.model.Event;
 import ru.practicum.model.QEvent;
 import ru.practicum.repository.CategoryRepository;
 import ru.practicum.repository.EventRepository;
-import ru.practicum.util.UriUtils;
+import stats.service.collector.ActionTypeProto;
+import stats.service.dashboard.RecommendedEventProto;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -52,13 +50,12 @@ public class EventService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
-    private final StatsClient statsClient;
+    private final CollectorClient collectorClient;
+    private final AnalyzerClient analyzerClient;
     private final UserClient userClient;
     private final RequestClient requestClient;
 
     private static final int MIN_HOURS_BEFORE_EVENT = 2;
-    private static final String APP_NAME = "ewm-service";
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * Получить публичные события с фильтрацией (только опубликованные)
@@ -72,8 +69,7 @@ public class EventService {
             Boolean onlyAvailable,
             EventSort sort,
             Integer from,
-            Integer size,
-            HttpServletRequest request) {
+            Integer size) {
 
         // Валидация: rangeEnd должен быть позже rangeStart
         if (rangeStart != null && rangeEnd != null && rangeEnd.isBefore(rangeStart)) {
@@ -115,64 +111,37 @@ public class EventService {
                     .or(QEvent.event.confirmedRequests.lt(QEvent.event.participantLimit)));
         }
 
-        // Сортировка
+        // Пагинация
         Pageable pageable = PageRequest.of(from / size, size);
         List<Event> eventsList = StreamSupport.stream(
                         eventRepository.findAll(predicate, pageable).spliterator(), false)
                 .toList();
 
-        // Логирование запроса в статистику
-        RequestStatisticDto hitDto = new RequestStatisticDto(
-                APP_NAME,
-                request.getRequestURI(),
-                request.getRemoteAddr(),
-                LocalDateTime.now().format(FORMATTER)
-        );
-        statsClient.saveHit(hitDto);
-
-        // Получение просмотров из статистики
-        Map<Long, Long> viewsMap = new HashMap<>();
+        // Получение рейтинга из analyzer
+        Map<Long, Double> ratingsMap = new HashMap<>();
         if (!eventsList.isEmpty()) {
             List<Long> eventIds = eventsList.stream()
                     .map(Event::getId)
                     .collect(Collectors.toList());
 
-            List<String> uris = UriUtils.makeEventUris(eventIds);
-
-            LocalDateTime statsStart = eventsList.stream()
-                    .map(Event::getCreatedOn)
-                    .min(LocalDateTime::compareTo)
-                    .orElse(LocalDateTime.now().minusYears(1));
-
-            List<ResponseStatisticDto> stats = statsClient.getStats(
-                    statsStart.format(FORMATTER),
-                    LocalDateTime.now().format(FORMATTER),
-                    uris,
-                    true
+            analyzerClient.getInteractionsCount(eventIds).forEach(proto ->
+                    ratingsMap.put(proto.getEventId(), proto.getScore())
             );
-
-            viewsMap = stats.stream()
-                    .collect(Collectors.toMap(
-                            stat -> Long.parseLong(stat.getUri().substring(stat.getUri().lastIndexOf("/") + 1)),
-                            ResponseStatisticDto::getHits,
-                            (existing, replacement) -> existing
-                    ));
         }
 
-        // Преобразование в DTO с проставлением просмотров и инициатора
-        Map<Long, Long> finalViewsMap = viewsMap;
+        // Преобразование в DTO с проставлением рейтинга и инициатора
         List<EventShortDto> result = eventsList.stream()
                 .map(event -> {
                     EventShortDto dto = eventMapper.toShortDto(event);
-                    dto.setViews(finalViewsMap.getOrDefault(event.getId(), 0L));
+                    dto.setRating(ratingsMap.getOrDefault(event.getId(), 0.0));
                     return dto;
                 })
                 .collect(Collectors.toList());
         enrichShortDtosWithUsers(result, eventsList);
 
-        // Сортировка по просмотрам, если указана
+        // Сортировка по рейтингу, если указана
         if (sort == EventSort.VIEWS) {
-            result.sort(Comparator.comparing(EventShortDto::getViews).reversed());
+            result.sort(Comparator.comparing(EventShortDto::getRating).reversed());
         }
 
         log.info("Найдено {} публичных событий", result.size());
@@ -182,7 +151,7 @@ public class EventService {
     /**
      * Получить публичное событие по ID
      */
-    public EventFullDto getPublicEventById(Long id, HttpServletRequest request) {
+    public EventFullDto getPublicEventById(Long id, long userId) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Событие не найдено с ID: " + id));
 
@@ -190,29 +159,74 @@ public class EventService {
             throw new NotFoundException("Событие не опубликовано");
         }
 
-        // Логирование просмотра в статистику
-        RequestStatisticDto hitDto = new RequestStatisticDto(
-                APP_NAME,
-                request.getRequestURI(),
-                request.getRemoteAddr(),
-                LocalDateTime.now().format(FORMATTER)
-        );
-        statsClient.saveHit(hitDto);
+        // Отправка действия просмотра в collector
+        collectorClient.collectUserAction(userId, id, ActionTypeProto.ACTION_VIEW);
 
-        // Получение количества просмотров из статистики
-        List<ResponseStatisticDto> stats = statsClient.getStats(
-                event.getCreatedOn().format(FORMATTER),
-                LocalDateTime.now().format(FORMATTER),
-                List.of(UriUtils.makeEventUri(id)),
-                true
-        );
+        // Получение рейтинга из analyzer
+        double rating = analyzerClient.getInteractionsCount(List.of(id))
+                .findFirst()
+                .map(RecommendedEventProto::getScore)
+                .orElse(0.0);
 
         EventFullDto result = eventMapper.toFullDto(event);
-        result.setViews(stats.isEmpty() ? 0L : stats.getFirst().getHits());
+        result.setRating(rating);
         enrichSingleDtoWithUser(result, event.getInitiatorId());
 
-        log.info("Получено публичное событие с ID: {}, просмотров: {}", id, result.getViews());
+        log.info("Получено публичное событие с ID: {}, рейтинг: {}", id, rating);
         return result;
+    }
+
+    /**
+     * Получить рекомендации для пользователя
+     */
+    public List<EventShortDto> getRecommendations(long userId, int maxResults) {
+        List<RecommendedEventProto> recommendations = analyzerClient
+                .getRecommendationsForUser(userId, maxResults)
+                .collect(Collectors.toList());
+
+        if (recommendations.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> eventIds = recommendations.stream()
+                .map(RecommendedEventProto::getEventId)
+                .collect(Collectors.toList());
+
+        Map<Long, Double> ratingsMap = recommendations.stream()
+                .collect(Collectors.toMap(RecommendedEventProto::getEventId, RecommendedEventProto::getScore));
+
+        List<Event> events = eventRepository.findAllByIdIn(eventIds);
+        List<EventShortDto> result = events.stream()
+                .map(event -> {
+                    EventShortDto dto = eventMapper.toShortDto(event);
+                    dto.setRating(ratingsMap.getOrDefault(event.getId(), 0.0));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        enrichShortDtosWithUsers(result, events);
+
+        log.info("Получено {} рекомендаций для пользователя {}", result.size(), userId);
+        return result;
+    }
+
+    /**
+     * Поставить лайк событию
+     */
+    @Transactional
+    public void likeEvent(long userId, long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Событие не найдено с ID: " + eventId));
+
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Событие не опубликовано");
+        }
+
+        if (!requestClient.participationExists(userId, eventId, ParticipationStatus.CONFIRMED)) {
+            throw new BadRequestException("Пользователь не посещал мероприятие с ID: " + eventId);
+        }
+
+        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_LIKE);
+        log.info("Пользователь {} поставил лайк событию {}", userId, eventId);
     }
 
     /**

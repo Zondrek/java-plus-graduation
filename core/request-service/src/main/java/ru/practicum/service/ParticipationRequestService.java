@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.CollectorClient;
 import ru.practicum.dto.event.EventInternalDto;
 import ru.practicum.dto.request.ParticipationRequestDto;
 import ru.practicum.enumeration.ParticipationStatus;
@@ -14,6 +15,7 @@ import ru.practicum.feign.UserClient;
 import ru.practicum.mapper.ParticipationRequestMapper;
 import ru.practicum.model.ParticipationRequest;
 import ru.practicum.repository.ParticipationRequestRepository;
+import stats.service.collector.ActionTypeProto;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +30,7 @@ public class ParticipationRequestService {
     private final UserClient userClient;
     private final EventClient eventClient;
     private final ParticipationRequestMapper mapper;
+    private final CollectorClient collectorClient;
 
     @Transactional
     public ParticipationRequestDto addRequest(Long userId, Long eventId) {
@@ -85,6 +88,9 @@ public class ParticipationRequestService {
         if (savedRequest.getStatus() == ParticipationStatus.CONFIRMED) {
             eventClient.updateConfirmedRequests(eventId, 1);
             log.info("Updated confirmedRequests for event {} by delta 1", eventId);
+
+            collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER);
+            log.info("Sent ACTION_REGISTER for userId={}, eventId={}", userId, eventId);
         }
 
         log.info("The request was successfully created: {}", savedRequest);

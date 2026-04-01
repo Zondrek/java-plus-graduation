@@ -69,7 +69,7 @@ public class EventShortDto {
     private String title;
 
     /**
-     * Количество просмотров события
+     * Рейтинг события
      */
-    private Long views;
+    private Double rating;
 }

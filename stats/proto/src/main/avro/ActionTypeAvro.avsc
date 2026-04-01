@@ -1,0 +1,30 @@
+[
+  {
+    "type": "enum",
+    "name": "ActionTypeAvro",
+    "namespace": "ru.practicum.ewm.stats.avro",
+    "symbols": ["VIEW", "REGISTER", "LIKE"]
+  },
+  {
+    "type": "record",
+    "name": "UserActionAvro",
+    "namespace": "ru.practicum.ewm.stats.avro",
+    "fields": [
+      {"name": "userId", "type": "long"},
+      {"name": "eventId", "type": "long"},
+      {"name": "actionType", "type": "ru.practicum.ewm.stats.avro.ActionTypeAvro"},
+      {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+    ]
+  },
+  {
+    "type": "record",
+    "name": "EventSimilarityAvro",
+    "namespace": "ru.practicum.ewm.stats.avro",
+    "fields": [
+      {"name": "eventA", "type": "long"},
+      {"name": "eventB", "type": "long"},
+      {"name": "score", "type": "double"},
+      {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+    ]
+  }
+]
