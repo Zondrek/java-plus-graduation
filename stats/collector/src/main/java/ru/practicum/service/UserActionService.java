@@ -12,6 +12,7 @@ import stats.service.collector.ActionTypeProto;
 import stats.service.collector.UserActionControllerGrpc;
 import stats.service.collector.UserActionProto;
 
+import java.time.Instant;
 
 @GrpcService
 @Slf4j
@@ -27,14 +28,15 @@ public class UserActionService extends UserActionControllerGrpc.UserActionContro
         log.info("Received user action: userId={}, eventId={}, type={}",
                 request.getUserId(), request.getEventId(), request.getActionType());
 
-        long timestampMs = request.getTimestamp().getSeconds() * 1000
-                + request.getTimestamp().getNanos() / 1_000_000;
+        Instant timestamp = Instant.ofEpochSecond(
+                request.getTimestamp().getSeconds(),
+                request.getTimestamp().getNanos());
 
         UserActionAvro avro = UserActionAvro.newBuilder()
                 .setUserId(request.getUserId())
                 .setEventId(request.getEventId())
                 .setActionType(mapActionType(request.getActionType()))
-                .setTimestamp(timestampMs)
+                .setTimestamp(timestamp)
                 .build();
 
         kafkaTemplate.send(TOPIC, String.valueOf(request.getEventId()), avro);

@@ -57,7 +57,7 @@ public class AggregatorService {
         eventWeightSums.merge(eventId, weightDelta, Double::sum);
 
         // Recalculate similarity with all other events
-        long timestamp = action.getTimestamp();
+        java.time.Instant timestamp = action.getTimestamp();
 
         for (Map.Entry<Long, Map<Long, Double>> otherEntry : eventUserWeights.entrySet()) {
             long otherEventId = otherEntry.getKey();

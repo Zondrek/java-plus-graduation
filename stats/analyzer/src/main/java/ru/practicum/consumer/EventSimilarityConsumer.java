@@ -26,8 +26,7 @@ public class EventSimilarityConsumer {
                 similarity.getEventA(), similarity.getEventB(), similarity.getScore());
 
         EventSimilarityId id = new EventSimilarityId(similarity.getEventA(), similarity.getEventB());
-        LocalDateTime ts = LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(similarity.getTimestamp()), ZoneOffset.UTC);
+        LocalDateTime ts = LocalDateTime.ofInstant(similarity.getTimestamp(), ZoneOffset.UTC);
 
         repository.save(EventSimilarity.builder()
                 .id(id)
