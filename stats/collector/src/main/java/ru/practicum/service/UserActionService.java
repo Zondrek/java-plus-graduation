@@ -5,7 +5,8 @@ import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import ru.practicum.ewm.stats.avro.ActionTypeAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 import stats.service.collector.ActionTypeProto;
@@ -19,7 +20,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class UserActionService extends UserActionControllerGrpc.UserActionControllerImplBase {
 
-    private final KafkaTemplate<String, UserActionAvro> kafkaTemplate;
+    private final Producer<Void, UserActionAvro> producer;
 
     private static final String TOPIC = "stats.user-actions.v1";
 
@@ -39,7 +40,9 @@ public class UserActionService extends UserActionControllerGrpc.UserActionContro
                 .setTimestamp(timestamp)
                 .build();
 
-        kafkaTemplate.send(TOPIC, String.valueOf(request.getEventId()), avro);
+        ProducerRecord<Void, UserActionAvro> record = new ProducerRecord<>(TOPIC, avro);
+        producer.send(record);
+        producer.flush();
 
         responseObserver.onNext(Empty.getDefaultInstance());
         responseObserver.onCompleted();
