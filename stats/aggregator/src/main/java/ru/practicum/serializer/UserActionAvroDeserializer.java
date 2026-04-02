@@ -8,12 +8,14 @@ import org.apache.kafka.common.serialization.Deserializer;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
 public class UserActionAvroDeserializer implements Deserializer<UserActionAvro> {
+    private final DatumReader<UserActionAvro> reader = new SpecificDatumReader<>(UserActionAvro.getClassSchema());
+    private BinaryDecoder decoder;
+
     @Override
     public UserActionAvro deserialize(String topic, byte[] data) {
         if (data == null) return null;
         try {
-            DatumReader<UserActionAvro> reader = new SpecificDatumReader<>(UserActionAvro.class);
-            BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(data, null);
+            decoder = DecoderFactory.get().binaryDecoder(data, decoder);
             return reader.read(null, decoder);
         } catch (Exception e) {
             throw new RuntimeException("Error deserializing UserActionAvro", e);

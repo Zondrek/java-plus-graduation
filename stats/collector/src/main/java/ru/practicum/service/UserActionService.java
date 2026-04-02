@@ -5,7 +5,6 @@ import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.apache.avro.specific.SpecificRecordBase;
 import org.springframework.kafka.core.KafkaTemplate;
 import ru.practicum.ewm.stats.avro.ActionTypeAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
@@ -20,7 +19,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class UserActionService extends UserActionControllerGrpc.UserActionControllerImplBase {
 
-    private final KafkaTemplate<String, SpecificRecordBase> kafkaTemplate;
+    private final KafkaTemplate<String, UserActionAvro> kafkaTemplate;
 
     private static final String TOPIC = "stats.user-actions.v1";
 
