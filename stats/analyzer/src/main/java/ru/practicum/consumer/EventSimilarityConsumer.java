@@ -9,6 +9,7 @@ import ru.practicum.model.EventSimilarity;
 import ru.practicum.model.EventSimilarityId;
 import ru.practicum.repository.EventSimilarityRepository;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
@@ -25,7 +26,8 @@ public class EventSimilarityConsumer {
                 similarity.getEventA(), similarity.getEventB(), similarity.getScore());
 
         EventSimilarityId id = new EventSimilarityId(similarity.getEventA(), similarity.getEventB());
-        LocalDateTime ts = LocalDateTime.ofInstant(similarity.getTimestamp(), ZoneOffset.UTC);
+        LocalDateTime ts = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(similarity.getTimestamp()), ZoneOffset.UTC);
 
         repository.save(EventSimilarity.builder()
                 .id(id)

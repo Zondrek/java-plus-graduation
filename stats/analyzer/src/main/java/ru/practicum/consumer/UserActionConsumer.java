@@ -9,6 +9,7 @@ import ru.practicum.model.UserAction;
 import ru.practicum.model.UserActionId;
 import ru.practicum.repository.UserActionRepository;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
@@ -31,7 +32,8 @@ public class UserActionConsumer {
         };
 
         UserActionId id = new UserActionId(action.getUserId(), action.getEventId());
-        LocalDateTime ts = LocalDateTime.ofInstant(action.getTimestamp(), ZoneOffset.UTC);
+        LocalDateTime ts = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(action.getTimestamp()), ZoneOffset.UTC);
 
         repository.findById(id).ifPresentOrElse(
             existing -> {

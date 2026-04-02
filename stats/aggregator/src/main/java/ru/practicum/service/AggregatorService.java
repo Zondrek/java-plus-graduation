@@ -9,7 +9,6 @@ import ru.practicum.ewm.stats.avro.ActionTypeAvro;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,7 +57,7 @@ public class AggregatorService {
         eventWeightSums.merge(eventId, weightDelta, Double::sum);
 
         // Recalculate similarity with all other events
-        Instant timestamp = action.getTimestamp();
+        long timestamp = action.getTimestamp();
 
         for (Map.Entry<Long, Map<Long, Double>> otherEntry : eventUserWeights.entrySet()) {
             long otherEventId = otherEntry.getKey();

@@ -13,7 +13,7 @@
       {"name": "userId", "type": "long"},
       {"name": "eventId", "type": "long"},
       {"name": "actionType", "type": "ru.practicum.ewm.stats.avro.ActionTypeAvro"},
-      {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+      {"name": "timestamp", "type": "long"}
     ]
   },
   {
@@ -24,7 +24,7 @@
       {"name": "eventA", "type": "long"},
       {"name": "eventB", "type": "long"},
       {"name": "score", "type": "double"},
-      {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+      {"name": "timestamp", "type": "long"}
     ]
   }
 ]
