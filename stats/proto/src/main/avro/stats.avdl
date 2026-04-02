@@ -6,9 +6,9 @@ protocol StatsProtocol {
     }
 
     record UserActionAvro {
-        long userId;
-        long eventId;
-        ActionTypeAvro actionType;
+        long user_id;
+        long event_id;
+        ActionTypeAvro action_type;
         timestamp_ms timestamp;
     }
 
