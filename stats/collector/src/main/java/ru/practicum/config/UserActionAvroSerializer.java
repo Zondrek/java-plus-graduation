@@ -1,29 +1,30 @@
 package ru.practicum.config;
 
+import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.specific.SpecificDatumWriter;
+import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.kafka.common.serialization.Serializer;
-import ru.practicum.ewm.stats.avro.UserActionAvro;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
-public class UserActionAvroSerializer implements Serializer<UserActionAvro> {
+public class UserActionAvroSerializer implements Serializer<SpecificRecordBase> {
 
     @Override
-    public byte[] serialize(String topic, UserActionAvro data) {
+    public byte[] serialize(String topic, SpecificRecordBase data) {
         if (data == null) {
             return null;
         }
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            JsonEncoder encoder = EncoderFactory.get().jsonEncoder(UserActionAvro.getClassSchema(), out);
-            DatumWriter<UserActionAvro> writer = new SpecificDatumWriter<>(UserActionAvro.class);
+            BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
+            DatumWriter<SpecificRecordBase> writer = new SpecificDatumWriter<>(data.getSchema());
             writer.write(data, encoder);
             encoder.flush();
             return out.toByteArray();
-        } catch (Exception e) {
-            throw new RuntimeException("Error serializing UserActionAvro", e);
+        } catch (IOException e) {
+            throw new RuntimeException("Error serializing Avro message", e);
         }
     }
 }
