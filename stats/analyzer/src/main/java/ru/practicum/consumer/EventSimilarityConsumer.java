@@ -20,7 +20,8 @@ public class EventSimilarityConsumer {
 
     private final EventSimilarityRepository repository;
 
-    @KafkaListener(topics = "stats.events-similarity.v1", containerFactory = "similarityListenerFactory")
+    @KafkaListener(topics = "${analyzer.kafka.topic.event-similarity:stats.events-similarity.v1}",
+            containerFactory = "similarityListenerFactory")
     public void consume(EventSimilarityAvro similarity) {
         log.debug("Received event similarity: eventA={}, eventB={}, score={}",
                 similarity.getEventA(), similarity.getEventB(), similarity.getScore());

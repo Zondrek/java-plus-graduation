@@ -20,7 +20,8 @@ public class UserActionConsumer {
 
     private final UserActionRepository repository;
 
-    @KafkaListener(topics = "stats.user-actions.v1", containerFactory = "userActionListenerFactory")
+    @KafkaListener(topics = "${analyzer.kafka.topic.user-actions:stats.user-actions.v1}",
+            containerFactory = "userActionListenerFactory")
     public void consume(UserActionAvro action) {
         log.debug("Received user action: userId={}, eventId={}, type={}",
                 action.getUserId(), action.getEventId(), action.getActionType());

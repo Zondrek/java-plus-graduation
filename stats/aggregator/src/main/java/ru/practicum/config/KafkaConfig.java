@@ -15,8 +15,8 @@ import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
-import ru.practicum.serializer.EventSimilarityAvroSerializer;
-import ru.practicum.serializer.UserActionAvroDeserializer;
+import ru.practicum.serialization.EventSimilarityAvroSerializer;
+import ru.practicum.serialization.UserActionAvroDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;

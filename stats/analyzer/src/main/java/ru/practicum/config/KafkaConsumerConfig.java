@@ -10,8 +10,8 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
-import ru.practicum.serializer.EventSimilarityAvroDeserializer;
-import ru.practicum.serializer.UserActionAvroDeserializer;
+import ru.practicum.serialization.EventSimilarityAvroDeserializer;
+import ru.practicum.serialization.UserActionAvroDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,14 +22,23 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
 
+    @Value("${analyzer.kafka.consumer.group-id.user-actions:analyzer-actions}")
+    private String userActionsGroupId;
+
+    @Value("${analyzer.kafka.consumer.group-id.event-similarity:analyzer-similarity}")
+    private String eventSimilarityGroupId;
+
+    @Value("${analyzer.kafka.consumer.auto-offset-reset:earliest}")
+    private String autoOffsetReset;
+
     @Bean
     public ConsumerFactory<String, UserActionAvro> userActionConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "analyzer-actions");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, userActionsGroupId);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, UserActionAvroDeserializer.class);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
@@ -45,10 +54,10 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, EventSimilarityAvro> eventSimilarityConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "analyzer-similarity");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, eventSimilarityGroupId);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, EventSimilarityAvroDeserializer.class);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 

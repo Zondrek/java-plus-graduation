@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.beans.factory.annotation.Value;
 import ru.practicum.ewm.stats.avro.ActionTypeAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 import stats.service.collector.ActionTypeProto;
@@ -22,7 +23,8 @@ public class UserActionService extends UserActionControllerGrpc.UserActionContro
 
     private final Producer<Void, UserActionAvro> producer;
 
-    private static final String TOPIC = "stats.user-actions.v1";
+    @Value("${collector.kafka.topic.user-actions:stats.user-actions.v1}")
+    private String userActionsTopic;
 
     @Override
     public void collectUserAction(UserActionProto request, StreamObserver<Empty> responseObserver) {
@@ -40,8 +42,16 @@ public class UserActionService extends UserActionControllerGrpc.UserActionContro
                 .setTimestamp(timestamp)
                 .build();
 
-        ProducerRecord<Void, UserActionAvro> record = new ProducerRecord<>(TOPIC, avro);
-        producer.send(record);
+        ProducerRecord<Void, UserActionAvro> record = new ProducerRecord<>(userActionsTopic, avro);
+        producer.send(record, (metadata, exception) -> {
+            if (exception != null) {
+                log.error("Failed to send user action to topic {}: {}", userActionsTopic,
+                        exception.getMessage(), exception);
+            } else {
+                log.debug("Sent user action to topic {} partition {} offset {}",
+                        userActionsTopic, metadata.partition(), metadata.offset());
+            }
+        });
         producer.flush();
 
         responseObserver.onNext(Empty.getDefaultInstance());

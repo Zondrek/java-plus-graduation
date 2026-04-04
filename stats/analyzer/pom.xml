@@ -20,6 +20,13 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
+        <!-- Serialization module (Avro serializers/deserializers) -->
+        <dependency>
+            <groupId>ru.practicum</groupId>
+            <artifactId>serialization</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+
         <!-- gRPC Server -->
         <dependency>
             <groupId>net.devh</groupId>

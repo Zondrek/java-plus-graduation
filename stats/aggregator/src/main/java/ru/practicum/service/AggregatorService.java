@@ -2,6 +2,7 @@ package ru.practicum.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,11 @@ public class AggregatorService {
 
     private final KafkaTemplate<String, EventSimilarityAvro> kafkaTemplate;
 
-    private static final String SIMILARITY_TOPIC = "stats.events-similarity.v1";
+    @Value("${aggregator.kafka.topic.user-actions:stats.user-actions.v1}")
+    private String userActionsTopic;
+
+    @Value("${aggregator.kafka.topic.event-similarity:stats.events-similarity.v1}")
+    private String similarityTopic;
 
     // event → (user → maxWeight)
     private final Map<Long, Map<Long, Double>> eventUserWeights = new HashMap<>();
@@ -30,7 +35,7 @@ public class AggregatorService {
     // min(eventA, eventB) → max(eventA, eventB) → Smin
     private final Map<Long, Map<Long, Double>> minWeightsSums = new HashMap<>();
 
-    @KafkaListener(topics = "stats.user-actions.v1")
+    @KafkaListener(topics = "${aggregator.kafka.topic.user-actions:stats.user-actions.v1}")
     public void processUserAction(UserActionAvro action) {
         long userId = action.getUserId();
         long eventId = action.getEventId();
@@ -90,10 +95,7 @@ public class AggregatorService {
             double sA = eventWeightSums.getOrDefault(first, 0.0);
             double sB = eventWeightSums.getOrDefault(second, 0.0);
 
-            double similarity = 0.0;
-            if (sA > 0 && sB > 0) {
-                similarity = sMin / (Math.sqrt(sA) * Math.sqrt(sB));
-            }
+            double similarity = (sA > 0 && sB > 0) ? sMin / (Math.sqrt(sA) * Math.sqrt(sB)) : 0.0;
 
             // Send to Kafka
             EventSimilarityAvro similarityAvro = EventSimilarityAvro.newBuilder()
@@ -103,9 +105,18 @@ public class AggregatorService {
                     .setTimestamp(timestamp)
                     .build();
 
-            kafkaTemplate.send(SIMILARITY_TOPIC, first + "-" + second, similarityAvro);
-
-            log.debug("Similarity({}, {}) = {}", first, second, similarity);
+            kafkaTemplate.send(similarityTopic, first + "-" + second, similarityAvro)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to send similarity({}, {}) to topic {}: {}",
+                                    first, second, similarityTopic, ex.getMessage(), ex);
+                        } else {
+                            log.debug("Sent similarity({}, {}) = {} to partition {} offset {}",
+                                    first, second, similarityAvro.getScore(),
+                                    result.getRecordMetadata().partition(),
+                                    result.getRecordMetadata().offset());
+                        }
+                    });
         }
     }
 
